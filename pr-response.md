@@ -58,9 +58,24 @@ sorting can still be useful, but I think it would make more sense as an optional
 preference rather than the default.
 
 ## Comment 6 — Rebase
-**What conflicted:**
-**How I resolved it:**
-**How I verified no conflict remains:**
+**What conflicted:** Running `git rebase origin/main` initially hit an add/add conflict in 
+`.gitignore`, since main had merged its own `.gitignore` while I had an uncommitted local one. 
+I merged both versions into a single file with all entries. 
+
+After the rebase completed without further conflict markers, `pytest` failed with an 
+`ImportError: cannot import name 'WatchlistEntry' from 'models'`. The UUID refactor on main 
+had replaced `models.py` in a way that silently dropped my `WatchlistEntry` class during the 
+rebase, without raising a visible conflict.
+
+**How I resolved it:** I used `git reflog` and `git show ec90edb:models.py` to recover my 
+original `WatchlistEntry` class definition from before the rebase. I re-added it to the current 
+`models.py`, updating `film_id` from `db.Integer` to `db.String(36)` to match the UUID refactor 
+(mirroring how `CollectionEntry.film_id` was already updated). I also updated stale docstrings 
+in `watchlist_service.py` that still referenced integer film IDs.
+
+**How I verified no conflict remains:** Ran `pytest tests/ -v` — all 5 tests passed, including 
+the new watchlist test. Confirmed via `git log --oneline` that the branch history is fully 
+linear with no merge commits, sitting cleanly on top of `origin/main`.
 
 ## PR Description
 <!-- Written at the end — feature overview, design decisions, manual testing steps -->
